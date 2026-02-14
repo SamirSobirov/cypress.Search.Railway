@@ -9,10 +9,14 @@ jobs:
   cypress-run:
     runs-on: ubuntu-latest
     env:
-      OFFERS_COUNT: 0 # Объявляем здесь, чтобы VS Code не ругался
+      OFFERS_COUNT: 0 
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: cypress-io/github-action@v6
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Cypress Tests
+        uses: cypress-io/github-action@v6
         with:
           spec: cypress/e2e/railway.cy.js
         env:
@@ -20,7 +24,7 @@ jobs:
           LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
         continue-on-error: true
 
-      - name: Read Count
+      - name: Extract Results
         if: always()
         run: |
           if [ -f offers_count.txt ]; then
@@ -29,14 +33,18 @@ jobs:
             echo "OFFERS_COUNT=0" >> $GITHUB_ENV
           fi
 
-      - name: Telegram
+      - name: Send Telegram Notification
         if: always()
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_TOKEN }}
+          token: ${{ secrets.TELEGRAM_TOKEN }} 
           format: markdown
           message: |
             🚂 **Railway Search Result**
-            Status: ${{ job.status == 'success' && '✅ Success' || '❌ Error' }}
-            Tickets Found: ${{ env.OFFERS_COUNT }}
+            
+            **Status:** ${{ job.status == 'success' && '✅ Success' || '❌ Error' }}
+            **Tickets Found:** ${{ env.OFFERS_COUNT }}
+            **Repository:** ${{ github.repository }}
+            
+            🔗 [Open Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})

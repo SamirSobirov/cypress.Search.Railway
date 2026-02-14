@@ -1,0 +1,42 @@
+name: Railway AutoTest
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
+
+jobs:
+  cypress-run:
+    runs-on: ubuntu-latest
+    env:
+      OFFERS_COUNT: 0 # Объявляем здесь, чтобы VS Code не ругался
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cypress-io/github-action@v6
+        with:
+          spec: cypress/e2e/railway.cy.js
+        env:
+          LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
+          LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
+        continue-on-error: true
+
+      - name: Read Count
+        if: always()
+        run: |
+          if [ -f offers_count.txt ]; then
+            echo "OFFERS_COUNT=$(cat offers_count.txt)" >> $GITHUB_ENV
+          else
+            echo "OFFERS_COUNT=0" >> $GITHUB_ENV
+          fi
+
+      - name: Telegram
+        if: always()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          format: markdown
+          message: |
+            🚂 **Railway Search Result**
+            Status: ${{ job.status == 'success' && '✅ Success' || '❌ Error' }}
+            Tickets Found: ${{ env.OFFERS_COUNT }}

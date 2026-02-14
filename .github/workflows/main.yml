@@ -47,4 +47,3 @@ jobs:
             **Tickets Found:** ${{ env.OFFERS_COUNT }}
             **Repository:** ${{ github.repository }}
             
-            🔗 [Open Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})

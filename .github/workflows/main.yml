@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '0 * * * *'
   workflow_dispatch:
+    # Добавляем входной параметр для ID чата
+    inputs:
+      user_chat_id:
+        description: 'ID чата для личного ответа'
+        required: false
+        default: ''
 
 jobs:
   cypress-run:
@@ -37,13 +43,18 @@ jobs:
         if: always()
         uses: appleboy/telegram-action@master
         with:
-          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Логика выбора: если есть user_chat_id — шлем лично, иначе — в группу из Secrets
+          to: >-
+            ${{ (github.event.inputs.user_chat_id != '') && 
+            github.event.inputs.user_chat_id || 
+            secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_TOKEN }} 
           format: markdown
           message: |
-            🚂 **Railway Search Result**
+            ${{ github.event.inputs.user_chat_id != '' && '👤 **Личный отчет**' || '📢 **Общий отчет (Группа)**' }}
             
+            🚂 **Railway Search Result**
             **Status:** ${{ job.status == 'success' && '✅ Success' || '❌ Error' }}
             **Tickets Found:** ${{ env.OFFERS_COUNT }}
-            **Repository:** ${{ github.repository }}
+            **Mode:** ${{ github.event_name == 'schedule' && 'Ежечасная проверка ⏰' || 'Запуск вручную 🔘' }}
             

@@ -4,7 +4,6 @@ on:
   schedule:
     - cron: '0 * * * *'
   workflow_dispatch:
-    # Добавляем входной параметр для ID чата
     inputs:
       user_chat_id:
         description: 'ID чата для личного ответа'
@@ -43,7 +42,6 @@ jobs:
         if: always()
         uses: appleboy/telegram-action@master
         with:
-          # Логика выбора: если есть user_chat_id — шлем лично, иначе — в группу из Secrets
           to: >-
             ${{ (github.event.inputs.user_chat_id != '') && 
             github.event.inputs.user_chat_id || 

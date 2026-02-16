@@ -51,10 +51,10 @@ jobs:
           token: ${{ secrets.TELEGRAM_TOKEN }} 
           format: markdown
           message: |
-            ${{ github.event.inputs.user_chat_id != '' && '👤 **Личный отчет**' || '📢 **Общий отчет (Группа)**' }}
+            ${{ github.event.inputs.user_chat_id != '' && '👤 **Отчет вручную**' || '📢 **Общий отчет (Группа)**' }}
             
             🚂 **Railway Search Result**
             **Status:** ${{ job.status == 'success' && '✅ Success' || '❌ Error' }}
             **Tickets Found:** ${{ env.OFFERS_COUNT }}
-            **Mode:** ${{ github.event_name == 'schedule' && 'Ежечасная проверка ⏰' || 'Запуск вручную 🔘' }}
+            **Mode:** ${{ github.event_name == 'schedule' && 'hourly Testing ⏰' || 'Manual Testing 🔘' }}
             

@@ -2,7 +2,6 @@ describe('Railway Product', () => {
   it('Search Flow - Railway', () => {
     cy.viewport(1280, 800);
     
-    // Перехват запроса obtain-trains, который мы видели на скрине Network
     cy.intercept('POST', '**/obtain-trains').as('railSearch');
 
     // 1. АВТОРИЗАЦИЯ
@@ -41,17 +40,15 @@ describe('Railway Product', () => {
     // 4. ПОИСК
     cy.get('button.easy-button.p-button-icon-only').should('be.visible').click({ force: true });
 
-    // 5. УМНАЯ ПРОВЕРКА (Ждем карточки, затем проверяем API)
+    // 5. УМНАЯ ПРОВЕРКА 
     cy.get('.ticket-card', { timeout: 40000 }).should('be.visible');
 
-    // Проверяем статус API, если он уже завершился
     cy.get('@railSearch').then((xhr) => {
       if (xhr && xhr.response) {
         expect(xhr.response.statusCode).to.equal(200);
       }
     });
 
-    // Считаем только видимые билеты (чтобы было 7, а не 10, если есть скрытые)
     cy.get('.ticket-card:visible').then(($tickets) => {
       const count = $tickets.length;
       cy.log(`Найдено реальных билетов: ${count}`);

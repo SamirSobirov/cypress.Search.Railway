@@ -2,7 +2,7 @@ name: Railway AutoTest
 
 on:
   schedule:
-    - cron: '0 * * * *' # Запуск каждый час
+    - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
       user_chat_id:
@@ -18,25 +18,23 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Cypress run
-        id: cypress_step
+        id: cypress
         uses: cypress-io/github-action@v6
         with:
           spec: cypress/e2e/railway.cy.js
-          browser: chrome
-          # Принудительная установка для предотвращения ошибки "binary missing"
-          build: npx cypress install
         env:
-          # В Cypress секреты из GitHub Actions должны начинаться с CYPRESS_
-          CYPRESS_LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
-          CYPRESS_LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
+          LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
+          LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
 
       - name: Extract Results
-        if: always()
+        id: extract_results
+        if: always() 
         run: |
           if [ -f offers_count.txt ]; then
-            echo "OFFERS_COUNT=$(cat offers_count.txt)" >> $GITHUB_ENV
+            COUNT=$(cat offers_count.txt)
+            echo "count=$COUNT" >> $GITHUB_OUTPUT
           else
-            echo "OFFERS_COUNT=0" >> $GITHUB_ENV
+            echo "count=0" >> $GITHUB_OUTPUT
           fi
 
       - name: Send Telegram Notification
@@ -47,12 +45,12 @@ jobs:
             ${{ (github.event.inputs.user_chat_id != '') && 
             github.event.inputs.user_chat_id || 
             secrets.TELEGRAM_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_TOKEN }}
+          token: ${{ secrets.TELEGRAM_TOKEN }} 
           format: markdown
           message: |
             ${{ github.event.inputs.user_chat_id != '' && '👤 **Manual Testing**' || '📢 **Hourly Testing**' }}
-
+            
             🚂 **Railway Search Result**
-            **Status:** ${{ steps.cypress_step.outcome == 'success' && '✅ Success' || '❌ Error' }}
-            **Tickets Found:** ${{ env.OFFERS_COUNT }}
-            **Mode:** ${{ github.event_name == 'schedule' && 'Scheduled ⏰' || 'Manual 🔘' }}
+            **Status:** ${{ steps.cypress.outcome == 'success' && '✅ Success' || '❌ Error' }}
+            **Offers Found:** ${{ steps.extract_results.outputs.count }}
+            **Time:** ${{ github.event_name == 'schedule' && 'Hourly ⏰' || 'Manual 🔘' }}

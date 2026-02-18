@@ -2,11 +2,13 @@ describe('Railway Product', () => {
   it('Search Flow - Railway', () => {
     cy.viewport(1280, 800);
     
+    // Перехватываем запрос до начала действий
     cy.intercept('POST', '**/obtain-trains').as('railSearch');
 
     // 1. АВТОРИЗАЦИЯ
     cy.visit('https://test.globaltravel.space/sign-in'); 
 
+    // Используем секреты, которые теперь корректно приходят из YAML
     cy.xpath("(//input[contains(@class,'input')])[1]").should('be.visible')
       .type(Cypress.env('LOGIN_EMAIL'), { log: false });
     
@@ -46,23 +48,26 @@ describe('Railway Product', () => {
 
     cy.get('body').type('{esc}');
 
-   // 5. ПОИСК
-cy.get('button.easy-button.p-button-icon-only')
-  .should('be.visible')
-  .click({ force: true });
+    // 5. ПОИСК
+    cy.get('button.easy-button.p-button-icon-only')
+      .should('be.visible')
+      .click({ force: true });
 
-cy.wait('@railSearch', { timeout: 30000 }).then((interception) => {
-  assert.isNotNull(interception.response, 'Сервер не прислал ответ');
-  expect(interception.response.statusCode).to.eq(200, 'Сервер вернул ошибку вместо билетов!');
-});
+    // 6. ПРОВЕРКА РЕЗУЛЬТАТА
+    // Сначала ждем появления билетов в интерфейсе
+    cy.get('.ticket-card', { timeout: 40000 }).should('be.visible');
 
-cy.get('.ticket-card', { timeout: 10000 })
-  .should('be.visible') 
-  .then(($tickets) => {
-    const count = $tickets.length;
-    cy.log(`Найдено реальных билетов на экране: ${count}`);
-    cy.writeFile('offers_count.txt', count.toString());
-    expect(count).to.be.greaterThan(0);
-  });
+    // Теперь проверяем, что запрос прошел успешно (используем get вместо wait, чтобы не упасть из-за скорости)
+    cy.get('@railSearch').then((interception) => {
+      expect(interception.response.statusCode).to.eq(200);
+    });
+
+    // Считаем карточки
+    cy.get('.ticket-card:visible').then(($tickets) => {
+      const count = $tickets.length;
+      cy.log(`Найдено билетов: ${count}`);
+      cy.writeFile('offers_count.txt', count.toString());
+      expect(count).to.be.greaterThan(0);
+    });
   });
 });

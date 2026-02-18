@@ -21,8 +21,9 @@ jobs:
         id: cypress
         uses: cypress-io/github-action@v6
         with:
-          # Указываем рабочую директорию, так как у тебя проект вложен в папку
-          working-directory: cypress.Search.Railway
+          # Мы убираем жесткую привязку к working-directory здесь, 
+          # если проект вложен, Cypress найдет его через параметр project
+          project: ./cypress.Search.Railway
           spec: cypress/e2e/railway.cy.js
         env:
           LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
@@ -32,8 +33,8 @@ jobs:
         id: extract_results
         if: always() 
         run: |
-          # Файл создается внутри working-directory, поэтому проверяем путь правильно
-          FILE="cypress.Search.Railway/offers_count.txt"
+          # Ищем файл во всех подпапках, чтобы точно не промахнуться
+          FILE=$(find . -name "offers_count.txt" | head -n 1)
           if [ -f "$FILE" ]; then
             COUNT=$(cat "$FILE")
             echo "count=$COUNT" >> $GITHUB_OUTPUT

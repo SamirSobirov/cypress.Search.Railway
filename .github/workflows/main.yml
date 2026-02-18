@@ -2,7 +2,7 @@ name: Railway AutoTest
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '0 * * * *' # Запуск каждый час
   workflow_dispatch:
     inputs:
       user_chat_id:
@@ -17,29 +17,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cypress run
-        id: cypress
+      - name: Run Cypress Tests
+        id: cypress_step # Добавили ID, чтобы обращаться к результату шага
         uses: cypress-io/github-action@v6
         with:
-          # Мы убираем жесткую привязку к working-directory здесь, 
-          # если проект вложен, Cypress найдет его через параметр project
-          project: ./cypress.Search.Railway
           spec: cypress/e2e/railway.cy.js
+          browser: chrome
+          # Команда build гарантирует установку бинарника Cypress в CI
+          build: npx cypress install
         env:
-          LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
-          LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
+          # Добавляем префикс CYPRESS_, чтобы скрипт увидел секреты
+          CYPRESS_LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
+          CYPRESS_LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
+        # Мы убрали continue-on-error, чтобы видеть реальные падения
 
       - name: Extract Results
-        id: extract_results
-        if: always() 
+        if: always()
         run: |
-          # Ищем файл во всех подпапках, чтобы точно не промахнуться
-          FILE=$(find . -name "offers_count.txt" | head -n 1)
-          if [ -f "$FILE" ]; then
-            COUNT=$(cat "$FILE")
-            echo "count=$COUNT" >> $GITHUB_OUTPUT
+          if [ -f offers_count.txt ]; then
+            echo "OFFERS_COUNT=$(cat offers_count.txt)" >> $GITHUB_ENV
           else
-            echo "count=0" >> $GITHUB_OUTPUT
+            echo "OFFERS_COUNT=0" >> $GITHUB_ENV
           fi
 
       - name: Send Telegram Notification
@@ -56,6 +54,8 @@ jobs:
             ${{ github.event.inputs.user_chat_id != '' && '👤 **Manual Testing**' || '📢 **Hourly Testing**' }}
             
             🚂 **Railway Search Result**
-            **Status:** ${{ steps.cypress.outcome == 'success' && '✅ Success' || '❌ Error' }}
-            **Offers Found:** ${{ steps.extract_results.outputs.count }}
-            **Time:** ${{ github.event_name == 'schedule' && 'Hourly ⏰' || 'Manual 🔘' }}
+            **Status:** ${{ steps.cypress_step.outcome == 'success' && '✅ Success' || '❌ Error (Site Down or No Tickets)' }}
+            **Tickets Found:** ${{ env.OFFERS_COUNT }}
+            **Mode:** ${{ github.event_name == 'schedule' && 'Scheduled ⏰' || 'Manual 🔘' }}
+            
+            🔗 [View Full Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})

@@ -21,14 +21,14 @@ jobs:
         id: cypress
         uses: cypress-io/github-action@v6
         with:
-          # Попробуй указать путь от корня репозитория. 
-          # Если package.json лежит сразу в cypress.Search.Railway, пиши так:
-          working-directory: cypress.Search.Railway
-          spec: cypress/e2e/railway.cy.js
+          # Если package.json лежит сразу в корне репозитория, 
+          # удали строку working-directory или оставь пустой.
+          # Если же репозиторий называется так же как папка, оставь так:
+          working-directory: . 
+          spec: cypress/e2e/monitoring/railway.cy.js
           browser: chrome
-          # Эта команда сама установит всё нужное, если есть lock-файл
-          install-command: npm ci 
         env:
+          # Секреты должны иметь префикс CYPRESS_
           CYPRESS_LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
           CYPRESS_LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
 
@@ -36,10 +36,9 @@ jobs:
         id: extract_results
         if: always() 
         run: |
-          # Ищем файл именно в рабочей директории
-          FILE_PATH="cypress.Search.Railway/cypress.Search.Railway/offers_count.txt"
-          if [ -f "$FILE_PATH" ]; then
-            COUNT=$(cat "$FILE_PATH")
+          # Файл создастся там же, где запускается Cypress
+          if [ -f "offers_count.txt" ]; then
+            COUNT=$(cat "offers_count.txt")
             echo "count=$COUNT" >> $GITHUB_OUTPUT
           else
             echo "count=0" >> $GITHUB_OUTPUT
@@ -61,5 +60,4 @@ jobs:
             🚂 **Railway Search Result**
             **Status:** ${{ steps.cypress.outcome == 'success' && '✅ Success' || '❌ Error' }}
             **Tickets Found:** ${{ steps.extract_results.outputs.count }}
-            **Mode:** ${{ github.event_name == 'schedule' && 'Scheduled ⏰' || 'Manual 🔘' }}
-            
+            **Time:** ${{ github.event_name == 'schedule' && 'Hourly ⏰' || 'Manual 🔘' }}

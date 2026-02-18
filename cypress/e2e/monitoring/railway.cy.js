@@ -1,12 +1,11 @@
 describe('Railway Product', () => {
   it('Search Flow', () => {
-    // Устанавливаем размер окна как в Авиа
     cy.viewport(1280, 800);
     
-    // 1. Интерцепт API запроса
+    // 1. Интерцепт API запроса (обновляем алиас для точности)
     cy.intercept('POST', '**/railway/offers**').as('railSearch');
 
-   // 1. ЛОГИН 
+    // 1. ЛОГИН 
     cy.visit('https://test.globaltravel.space/sign-in'); 
 
     cy.xpath("(//input[contains(@class,'input')])[1]").should('be.visible')
@@ -16,17 +15,13 @@ describe('Railway Product', () => {
       .type(Cypress.env('LOGIN_PASSWORD'), { log: false }).type('{enter}');
 
     cy.url({ timeout: 20000 }).should('include', '/home');
-    
     cy.get('body').should('not.contain', 'Ошибка');
 
-    // Ждем перехода на главную
-    cy.url({ timeout: 40000 }).should('include', '/home');
-
-    // ПЕРЕХОД В ЖД (Твоя новая структура)
+    // ПЕРЕХОД В ЖД
     cy.visit('https://test.globaltravel.space/railway');
     cy.url().should('include', '/railway');
 
-    // 2. ОТКУДА (С добавлением clear() и задержки из Авиа)
+    // 2. ОТКУДА
     cy.get('input[placeholder="Откуда"]').should('be.visible')
       .click({ force: true })
       .clear()
@@ -36,7 +31,7 @@ describe('Railway Product', () => {
       .contains(/ТАШКЕНТ СЕВЕРНЫЙ/i)
       .click({ force: true });
     
-    cy.wait(1000); // Пауза как в Авиа для стабильности
+    cy.wait(1000); 
 
     // 3. КУДА
     cy.get('input[placeholder="Куда"]').should('be.visible')
@@ -50,14 +45,13 @@ describe('Railway Product', () => {
     
     cy.wait(1000);
 
-    // 4. ДАТА (Логика выбора "Сегодня + 2 дня")
+    // 4. ДАТА
     cy.get("input[placeholder='Когда']").click({ force: true });
     
     const targetDate = new Date();
     targetDate.setDate(targetDate.getDate() + 2);
     const dayToSelect = targetDate.getDate();
 
-    // Выбираем число (исключая соседние месяцы)
     cy.get('.p-datepicker-calendar td:not(.p-datepicker-other-month)')
       .contains(new RegExp(`^${dayToSelect}$`))
       .click({ force: true });
@@ -70,27 +64,23 @@ describe('Railway Product', () => {
       .should('be.visible')
       .click({ force: true });
 
-    // 6. ПРОВЕРКА РЕЗУЛЬТАТА И ЗАПИСЬ ДЛЯ TELEGRAM
-    cy.wait('@railSearch', { timeout: 60000 }).then((interception) => {
-      // Проверяем, что API ответило успешно
-      expect(interception.response.statusCode).to.be.oneOf([200, 201]);
+    // 6. ПРОВЕРКА РЕЗУЛЬТАТА
+    // Сначала ждем ответа от сервера (интерцепт должен быть объявлен в начале теста)
+    cy.wait('@railSearch', { timeout: 30000 });
 
-      const body = interception.response.body;
-      
-      // Поиск массива данных (универсальный как в Авиа)
-      const offersList = body.offers || body.data || body.flights || (Array.isArray(body) ? body : []);
-      const count = offersList.length;
+    // Теперь ждем, когда эти данные превратятся в карточки на экране
+    cy.get('.ticket-card', { timeout: 20000 }).should('be.visible');
 
-      cy.log(`DEBUG: Found ${count} railway offers`);
+    // Считаем карточки
+    cy.get('.ticket-card').then(($tickets) => {
+      const count = $tickets.length;
+      cy.log(`Найдено билетов ЖД: ${count}`);
 
-      // ЗАПИСЫВАЕМ ЧИСЛО В ФАЙЛ ДЛЯ GITHUB ACTIONS
+      // Записываем результат для Telegram
       cy.writeFile('offers_count.txt', count.toString());
-      
-      // Если билеты есть, проверяем, что они отрисовались
-      if (count > 0) {
-        // Убедись, что .offer-item — это правильный класс карточки ЖД билета
-        cy.get('.offer-item', { timeout: 20000 }).should('exist');
-      }
+
+      // Проверка на наличие билетов
+      expect(count).to.be.greaterThan(0);
     });
   });
 });

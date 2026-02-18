@@ -17,19 +17,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run Cypress Tests
-        id: cypress_step # Добавили ID, чтобы обращаться к результату шага
+      - name: Cypress run
+        id: cypress_step
         uses: cypress-io/github-action@v6
         with:
           spec: cypress/e2e/railway.cy.js
           browser: chrome
-          # Команда build гарантирует установку бинарника Cypress в CI
+          # Принудительная установка для предотвращения ошибки "binary missing"
           build: npx cypress install
         env:
-          # Добавляем префикс CYPRESS_, чтобы скрипт увидел секреты
+          # В Cypress секреты из GitHub Actions должны начинаться с CYPRESS_
           CYPRESS_LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
           CYPRESS_LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
-        # Мы убрали continue-on-error, чтобы видеть реальные падения
 
       - name: Extract Results
         if: always()
@@ -48,14 +47,14 @@ jobs:
             ${{ (github.event.inputs.user_chat_id != '') && 
             github.event.inputs.user_chat_id || 
             secrets.TELEGRAM_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_TOKEN }} 
+          token: ${{ secrets.TELEGRAM_TOKEN }}
           format: markdown
           message: |
             ${{ github.event.inputs.user_chat_id != '' && '👤 **Manual Testing**' || '📢 **Hourly Testing**' }}
-            
+
             🚂 **Railway Search Result**
-            **Status:** ${{ steps.cypress_step.outcome == 'success' && '✅ Success' || '❌ Error (Site Down or No Tickets)' }}
+            **Status:** ${{ steps.cypress_step.outcome == 'success' && '✅ Success' || '❌ Error' }}
             **Tickets Found:** ${{ env.OFFERS_COUNT }}
             **Mode:** ${{ github.event_name == 'schedule' && 'Scheduled ⏰' || 'Manual 🔘' }}
-            
-            🔗 [View Full Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            🔗 [View Results](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})

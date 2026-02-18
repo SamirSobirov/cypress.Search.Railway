@@ -21,7 +21,10 @@ jobs:
         id: cypress
         uses: cypress-io/github-action@v6
         with:
+          # Если файл railway.cy.js лежит глубоко, проверьте этот путь!
           spec: cypress/e2e/railway.cy.js
+          # Если папка cypress НЕ в корне репозитория, раскомментируйте строку ниже и укажите папку:
+          # working-directory: ваша_папка_проекта 
         env:
           LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
           LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
@@ -30,6 +33,7 @@ jobs:
         id: extract_results
         if: always() 
         run: |
+          # Проверяем наличие файла в текущей директории
           if [ -f offers_count.txt ]; then
             COUNT=$(cat offers_count.txt)
             echo "count=$COUNT" >> $GITHUB_OUTPUT

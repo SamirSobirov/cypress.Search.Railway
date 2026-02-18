@@ -46,23 +46,22 @@ describe('Railway Product', () => {
 
     cy.get('body').type('{esc}');
 
-   // 5. ПОИСК
-cy.get('button.easy-button.p-button-icon-only')
-  .should('be.visible')
-  .click({ force: true });
+  // 5. ПОИСК
+    cy.get('button.easy-button.p-button-icon-only').click({ force: true });
 
-cy.wait('@railSearch', { timeout: 30000 }).then((interception) => {
-  assert.isNotNull(interception.response, 'Сервер не прислал ответ');
-  expect(interception.response.statusCode).to.eq(200, 'Сервер вернул ошибку вместо билетов!');
-});
+    // 6. СТРОГАЯ ПРОВЕРКА (Ждем ответ от сервера ПЕРЕД проверкой билетов)
+    // Это заставит тест упасть на ошибке 400 и не даст записать ложный Success
+    cy.wait('@railSearch', { timeout: 30000 }).then((interception) => {
+      expect(interception.response.statusCode).to.eq(200, 'Ошибка сервера при поиске!');
+    });
 
-cy.get('.ticket-card', { timeout: 10000 })
-  .should('be.visible') 
-  .then(($tickets) => {
-    const count = $tickets.length;
-    cy.log(`Найдено реальных билетов на экране: ${count}`);
-    cy.writeFile('offers_count.txt', count.toString());
-    expect(count).to.be.greaterThan(0);
-  });
+    // 7. ПРОВЕРКА БИЛЕТОВ
+    cy.get('.ticket-card', { timeout: 10000 })
+      .should('be.visible')
+      .then(($tickets) => {
+        const count = $tickets.length;
+        cy.writeFile('offers_count.txt', count.toString());
+        expect(count).to.be.greaterThan(0);
+      });
   });
 });

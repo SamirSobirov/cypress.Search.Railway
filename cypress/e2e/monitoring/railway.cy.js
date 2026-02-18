@@ -6,9 +6,6 @@ describe('Railway Product', () => {
     // 1. Интерцепт API запроса
     cy.intercept('POST', '**/railway/offers**').as('railSearch');
 
-    // Начинаем с логина
-    cy.visit('https://test.globaltravel.space/sign-in');
-
    // 1. ЛОГИН 
     cy.visit('https://test.globaltravel.space/sign-in'); 
 

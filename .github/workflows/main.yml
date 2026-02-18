@@ -13,29 +13,29 @@ on:
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
-    env:
-      OFFERS_COUNT: 0 
-
     steps:
       - name: Checkout
+        # Исправлено: используем стандартный экшен GitHub
         uses: actions/checkout@v4
 
       - name: Cypress run
+        id: cypress # Добавили ID, чтобы обращаться к статусу этого шага
         uses: cypress-io/github-action@v6
         with:
           spec: cypress/e2e/railway.cy.js
         env:
           LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
           LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
-        continue-on-error: true
 
       - name: Extract Results
-        if: always()
+        id: extract_results
+        if: always() 
         run: |
           if [ -f offers_count.txt ]; then
-            echo "OFFERS_COUNT=$(cat offers_count.txt)" >> $GITHUB_ENV
+            COUNT=$(cat offers_count.txt)
+            echo "count=$COUNT" >> $GITHUB_OUTPUT
           else
-            echo "OFFERS_COUNT=0" >> $GITHUB_ENV
+            echo "count=0" >> $GITHUB_OUTPUT
           fi
 
       - name: Send Telegram Notification
@@ -49,10 +49,9 @@ jobs:
           token: ${{ secrets.TELEGRAM_TOKEN }} 
           format: markdown
           message: |
-            ${{ github.event.inputs.user_chat_id != '' && '👤 **Manual Testing' || '📢 **hourly Testing**' }}
+            ${{ github.event.inputs.user_chat_id != '' && '👤 **Manual Testing**' || '📢 **Hourly Testing**' }}
             
             🚂 **Railway Search Result**
-            **Status:** ${{ job.status == 'success' && '✅ Success' || '❌ Error' }}
-            **Offers Found:** ${{ env.OFFERS_COUNT }}
-            **Time:** ${{ github.event_name == 'schedule' && 'hourly Testing ⏰' || 'Manual Testing 🔘' }}
-            
+            **Status:** ${{ steps.cypress.outcome == 'success' && '✅ Success' || '❌ Error' }}
+            **Offers Found:** ${{ steps.extract_results.outputs.count }}
+            **Time:** ${{ github.event_name == 'schedule' && 'Hourly ⏰' || 'Manual 🔘' }}

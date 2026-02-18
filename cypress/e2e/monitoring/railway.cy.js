@@ -47,34 +47,27 @@ describe('Railway Product', () => {
 
     cy.get('body').type('{esc}');
 
-    // 5. ПОИСК
-    cy.get('button.easy-button.p-button-icon-only')
-      .should('be.visible')
-      .click({ force: true });
+   // 5. ПОИСК
+cy.get('button.easy-button.p-button-icon-only')
+  .should('be.visible')
+  .click({ force: true });
 
-    // 6. УМНАЯ ПРОВЕРКА РЕЗУЛЬТАТА
-    // А) Сначала ждем, что билеты ФИЗИЧЕСКИ появились и стали ВИДИМЫ (решает проблему 10 vs 7)
-    cy.get('.ticket-card', { timeout: 45000 }).should('be.visible');
+// 6. УМНАЯ ПРОВЕРКА РЕЗУЛЬТАТА
 
-    // Б) Считаем только те карточки, которые видит пользователь (:visible)
-    cy.get('.ticket-card:visible').then(($tickets) => {
-      const count = $tickets.length;
-      cy.log(`Найдено реальных билетов на экране: ${count}`);
+// А) СТРОГО ЖДЕМ ОТВЕТ СЕРВЕРА. Если тут будет 400, тест упадет здесь!
+cy.wait('@railSearch', { timeout: 30000 }).then((interception) => {
+  assert.isNotNull(interception.response, 'Сервер не прислал ответ');
+  expect(interception.response.statusCode).to.eq(200, 'Сервер вернул ошибку вместо билетов!');
+});
 
-      // Записываем точное число для Telegram бота
-      cy.writeFile('offers_count.txt', count.toString());
-
-      // В) Проверяем статус запроса через историю (cy.get вместо cy.wait)
-      // Это предотвращает падение, если запрос завершился слишком быстро
-      cy.get('@railSearch').then((xhr) => {
-        if (xhr && xhr.response) {
-          cy.log('Статус ответа сервера:', xhr.response.statusCode);
-          expect(xhr.response.statusCode).to.be.oneOf([200, 201]);
-        }
-      });
-
-      // Г) Финальный ассерт: тест упадет только если билетов действительно 0
-      expect(count, 'На странице должны быть видимые билеты').to.be.greaterThan(0);
-    });
+// Б) Только если сервер ответил 200, проверяем наличие билетов
+cy.get('.ticket-card', { timeout: 10000 })
+  .should('be.visible') // Убеждаемся, что они именно видимы
+  .then(($tickets) => {
+    const count = $tickets.length;
+    cy.log(`Найдено реальных билетов на экране: ${count}`);
+    cy.writeFile('offers_count.txt', count.toString());
+    expect(count).to.be.greaterThan(0);
+  });
   });
 });

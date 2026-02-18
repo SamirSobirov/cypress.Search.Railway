@@ -30,10 +30,10 @@ describe('Railway Product', () => {
     cy.get('input[placeholder="Откуда"]').should('be.visible')
       .click({ force: true })
       .clear()
-      .type('Ташкент', { delay: 200 });
+      .type('ТАШКЕНТ СЕВЕРНЫЙ', { delay: 200 });
     
     cy.get('.p-listbox-item', { timeout: 10000 })
-      .contains(/ТАШКЕНТ/i)
+      .contains(/ТАШКЕНТ СЕВЕРНЫЙ/i)
       .click({ force: true });
     
     cy.wait(1000); // Пауза как в Авиа для стабильности
@@ -42,7 +42,7 @@ describe('Railway Product', () => {
     cy.get('input[placeholder="Куда"]').should('be.visible')
       .click({ force: true })
       .clear()
-      .type('Самарканд', { delay: 250 });
+      .type('САМАРКАНД', { delay: 250 });
 
     cy.get('.p-listbox-item', { timeout: 10000 })
       .contains(/САМАРКАНД/i)

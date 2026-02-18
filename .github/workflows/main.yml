@@ -56,5 +56,3 @@ jobs:
             **Status:** ${{ steps.cypress_step.outcome == 'success' && '✅ Success' || '❌ Error' }}
             **Tickets Found:** ${{ env.OFFERS_COUNT }}
             **Mode:** ${{ github.event_name == 'schedule' && 'Scheduled ⏰' || 'Manual 🔘' }}
-
-            🔗 [View Results](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})

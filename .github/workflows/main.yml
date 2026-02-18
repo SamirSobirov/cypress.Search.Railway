@@ -18,16 +18,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Cypress Tests
-        id: cypress_step # Добавили ID для отслеживания статуса
+        id: cypress_step 
         uses: cypress-io/github-action@v6
         with:
           spec: cypress/e2e/railway.cy.js
           browser: chrome
         env:
-          # ВАЖНО: Добавлен префикс CYPRESS_, чтобы тест увидел логин и пароль
           CYPRESS_LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
           CYPRESS_LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
-        # continue-on-error: true  <-- УДАЛЕНО! Теперь тест будет падать по-настоящему.
 
       - name: Extract Results
         if: always()

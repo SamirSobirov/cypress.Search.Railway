@@ -15,11 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        # Исправлено: используем стандартный экшен GitHub
         uses: actions/checkout@v4
 
       - name: Cypress run
-        id: cypress # Добавили ID, чтобы обращаться к статусу этого шага
+        id: cypress
         uses: cypress-io/github-action@v6
         with:
           spec: cypress/e2e/railway.cy.js

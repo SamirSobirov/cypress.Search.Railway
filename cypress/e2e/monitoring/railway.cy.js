@@ -2,7 +2,6 @@ describe('Railway Product', () => {
   it('Search Flow - Railway', () => {
     cy.viewport(1280, 800);
     
-    // 1. ИНТЕРЦЕПТ: Используем точный эндпоинт, который мы нашли в Network (obtain-trains)
     cy.intercept('POST', '**/obtain-trains').as('railSearch');
 
     // 1. АВТОРИЗАЦИЯ
@@ -34,7 +33,7 @@ describe('Railway Product', () => {
     cy.get('.p-listbox-item', { timeout: 10000 })
       .contains(/САМАРКАНД/i).click({ force: true });
 
-    // 4. ДАТА (Сегодня + 2 дня)
+    // 4. ДАТА 
     cy.get("input[placeholder='Когда']").click({ force: true });
     
     const targetDate = new Date();
@@ -52,17 +51,13 @@ cy.get('button.easy-button.p-button-icon-only')
   .should('be.visible')
   .click({ force: true });
 
-// 6. УМНАЯ ПРОВЕРКА РЕЗУЛЬТАТА
-
-// А) СТРОГО ЖДЕМ ОТВЕТ СЕРВЕРА. Если тут будет 400, тест упадет здесь!
 cy.wait('@railSearch', { timeout: 30000 }).then((interception) => {
   assert.isNotNull(interception.response, 'Сервер не прислал ответ');
   expect(interception.response.statusCode).to.eq(200, 'Сервер вернул ошибку вместо билетов!');
 });
 
-// Б) Только если сервер ответил 200, проверяем наличие билетов
 cy.get('.ticket-card', { timeout: 10000 })
-  .should('be.visible') // Убеждаемся, что они именно видимы
+  .should('be.visible') 
   .then(($tickets) => {
     const count = $tickets.length;
     cy.log(`Найдено реальных билетов на экране: ${count}`);

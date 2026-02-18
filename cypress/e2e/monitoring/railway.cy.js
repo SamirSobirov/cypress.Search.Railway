@@ -9,11 +9,18 @@ describe('Railway Product', () => {
     // Начинаем с логина
     cy.visit('https://test.globaltravel.space/sign-in');
 
-    // АВТОРИЗАЦИЯ (Метод из Авиа: xpath + Cypress.env)
+   // 1. ЛОГИН 
+    cy.visit('https://test.globaltravel.space/sign-in'); 
+
     cy.xpath("(//input[contains(@class,'input')])[1]").should('be.visible')
       .type(Cypress.env('LOGIN_EMAIL'), { log: false });
+    
     cy.xpath("(//input[contains(@class,'input')])[2]")
       .type(Cypress.env('LOGIN_PASSWORD'), { log: false }).type('{enter}');
+
+    cy.url({ timeout: 20000 }).should('include', '/home');
+    
+    cy.get('body').should('not.contain', 'Ошибка');
 
     // Ждем перехода на главную
     cy.url({ timeout: 40000 }).should('include', '/home');

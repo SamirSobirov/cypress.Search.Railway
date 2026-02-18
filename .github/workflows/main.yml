@@ -13,21 +13,21 @@ on:
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
-    env:
-      OFFERS_COUNT: 0 
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Run Cypress Tests
+        id: cypress_step # Добавили ID для отслеживания статуса
         uses: cypress-io/github-action@v6
         with:
           spec: cypress/e2e/railway.cy.js
+          browser: chrome
         env:
-          LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
-          LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
-        continue-on-error: true
+          # ВАЖНО: Добавлен префикс CYPRESS_, чтобы тест увидел логин и пароль
+          CYPRESS_LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
+          CYPRESS_LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
+        # continue-on-error: true  <-- УДАЛЕНО! Теперь тест будет падать по-настоящему.
 
       - name: Extract Results
         if: always()
@@ -49,10 +49,10 @@ jobs:
           token: ${{ secrets.TELEGRAM_TOKEN }} 
           format: markdown
           message: |
-            ${{ github.event.inputs.user_chat_id != '' && '👤 **Manual Testing' || '📢 **hourly Testing**' }}
+            ${{ github.event.inputs.user_chat_id != '' && '👤 **Manual Testing**' || '📢 **Hourly Testing**' }}
             
             🚂 **Railway Search Result**
-            **Status:** ${{ job.status == 'success' && '✅ Success' || '❌ Error' }}
+            **Status:** ${{ steps.cypress_step.outcome == 'success' && '✅ Success' || '❌ Error (Site Down or Login Failed)' }}
             **Tickets Found:** ${{ env.OFFERS_COUNT }}
-            **Mode:** ${{ github.event_name == 'schedule' && 'hourly Testing ⏰' || 'Manual Testing 🔘' }}
+            **Mode:** ${{ github.event_name == 'schedule' && 'Hourly Testing ⏰' || 'Manual Testing 🔘' }}
             

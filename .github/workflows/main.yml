@@ -21,12 +21,14 @@ jobs:
         id: cypress
         uses: cypress-io/github-action@v6
         with:
-          # Указываем папку, где лежит package.json (как на твоем скрине)
-          working-directory: cypress.Search.Railway/cypress.Search.Railway
+          # Попробуй указать путь от корня репозитория. 
+          # Если package.json лежит сразу в cypress.Search.Railway, пиши так:
+          working-directory: cypress.Search.Railway
           spec: cypress/e2e/railway.cy.js
           browser: chrome
+          # Эта команда сама установит всё нужное, если есть lock-файл
+          install-command: npm ci 
         env:
-          # ВАЖНО: Добавлен префикс CYPRESS_, чтобы JS-код их увидел
           CYPRESS_LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
           CYPRESS_LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
 

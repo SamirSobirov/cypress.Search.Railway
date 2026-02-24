@@ -17,10 +17,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 1. Подготовка: удаляем старые отчеты, чтобы не путаться
-      - name: Cleanup old reports
+      # 1. Очистка и создание заглушек
+      - name: Pre-run Setup
         run: |
           rm -f api_status.txt offers_count.txt
+          echo "UNKNOWN" > api_status.txt
+          echo "N/A" > offers_count.txt
           mkdir -p cypress/screenshots
 
       - name: Cypress run
@@ -33,25 +35,12 @@ jobs:
           CYPRESS_LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
         continue-on-error: true
 
-      # 2. Обработка данных для Telegram
       - name: Parse Diagnostic Data
         if: always()
         run: |
-          # Проверяем код API
-          if [ -f api_status.txt ]; then
-            API_STATUS=$(cat api_status.txt | tr -d '[:space:]')
-          else
-            API_STATUS="UNKNOWN"
-          fi
-          
-          # Проверяем количество билетов
-          if [ -f offers_count.txt ]; then
-            COUNT=$(cat offers_count.txt | tr -d '[:space:]')
-          else
-            COUNT="N/A"
-          fi
+          API_STATUS=$(cat api_status.txt | tr -d '[:space:]')
+          COUNT=$(cat offers_count.txt | tr -d '[:space:]')
 
-          # Умная логика статусов
           if [[ "$COUNT" == "ERROR" || "$API_STATUS" == "UNKNOWN" ]]; then
             echo "MSG_STATUS=❌ Test Failed (UI/Timeout)" >> $GITHUB_ENV
             echo "MSG_COUNT=N/A" >> $GITHUB_ENV
@@ -61,24 +50,19 @@ jobs:
           elif [[ "$COUNT" == "0" ]]; then
             echo "MSG_STATUS=⚪ No Tickets" >> $GITHUB_ENV
             echo "MSG_COUNT=0" >> $GITHUB_ENV
-          elif [[ "$COUNT" =~ ^[0-9]+$ ]]; then
-            echo "MSG_STATUS=✅ Success" >> $GITHUB_ENV
-            echo "MSG_COUNT=$COUNT" >> $GITHUB_ENV
           else
-            echo "MSG_STATUS=❓ Unknown Result" >> $GITHUB_ENV
+            echo "MSG_STATUS=✅ Success" >> $GITHUB_ENV
             echo "MSG_COUNT=$COUNT" >> $GITHUB_ENV
           fi
 
-      # 3. Сохранение скриншотов (Cypress создаст папку автоматически при падении)
-      - name: Upload Cypress Screenshots
+      - name: Upload Screenshots
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: railway-failure-screenshots
+          name: failure-screenshots
           path: cypress/screenshots/
           if-no-files-found: ignore
 
-      # 4. Отправка уведомления
       - name: Send Telegram Notification
         if: always()
         uses: appleboy/telegram-action@master

@@ -17,28 +17,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 1. ОЧИСТКА: Удаляем мусорные файлы и папку скриншотов перед тестом
-      - name: Pre-run Cleanup
+      # 1. Подготовка: удаляем старые отчеты, чтобы не путаться
+      - name: Cleanup old reports
         run: |
           rm -f api_status.txt offers_count.txt
-          rm -rf cypress/screenshots/*
+          mkdir -p cypress/screenshots
 
       - name: Cypress run
         uses: cypress-io/github-action@v6
         with:
           spec: cypress/e2e/monitoring/railway.cy.js 
           browser: chrome
-          # Чистим артефакты самого Cypress внутри контейнера
-          config: trashAssetsBeforeRuns=true
         env:
           CYPRESS_LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
           CYPRESS_LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
         continue-on-error: true
 
+      # 2. Обработка данных для Telegram
       - name: Parse Diagnostic Data
         if: always()
         run: |
-          # Проверяем статус API
+          # Проверяем код API
           if [ -f api_status.txt ]; then
             API_STATUS=$(cat api_status.txt | tr -d '[:space:]')
           else
@@ -52,8 +51,8 @@ jobs:
             COUNT="N/A"
           fi
 
-          # Логика формирования статуса для Telegram
-          if [[ "$API_STATUS" == "UNKNOWN" || "$COUNT" == "N/A" || "$COUNT" == "ERROR" ]]; then
+          # Умная логика статусов
+          if [[ "$COUNT" == "ERROR" || "$API_STATUS" == "UNKNOWN" ]]; then
             echo "MSG_STATUS=❌ Test Failed (UI/Timeout)" >> $GITHUB_ENV
             echo "MSG_COUNT=N/A" >> $GITHUB_ENV
           elif [[ "$API_STATUS" -ge 400 ]]; then
@@ -62,20 +61,24 @@ jobs:
           elif [[ "$COUNT" == "0" ]]; then
             echo "MSG_STATUS=⚪ No Tickets" >> $GITHUB_ENV
             echo "MSG_COUNT=0" >> $GITHUB_ENV
-          else
+          elif [[ "$COUNT" =~ ^[0-9]+$ ]]; then
             echo "MSG_STATUS=✅ Success" >> $GITHUB_ENV
+            echo "MSG_COUNT=$COUNT" >> $GITHUB_ENV
+          else
+            echo "MSG_STATUS=❓ Unknown Result" >> $GITHUB_ENV
             echo "MSG_COUNT=$COUNT" >> $GITHUB_ENV
           fi
 
-      # 2. СОХРАНЕНИЕ СКРИНШОТОВ: Если тест упал, они будут в Artifacts
+      # 3. Сохранение скриншотов (Cypress создаст папку автоматически при падении)
       - name: Upload Cypress Screenshots
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: railway-screenshots
+          name: railway-failure-screenshots
           path: cypress/screenshots/
           if-no-files-found: ignore
 
+      # 4. Отправка уведомления
       - name: Send Telegram Notification
         if: always()
         uses: appleboy/telegram-action@master

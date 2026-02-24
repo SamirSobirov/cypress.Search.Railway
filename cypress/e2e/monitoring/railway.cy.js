@@ -9,8 +9,8 @@ describe('Railway Product', () => {
   it('Search Flow - Railway with Smart Diagnostic', () => {
     cy.viewport(1280, 800);
     
-    // Перехват API поиска жд билетов
-    cy.intercept('POST', '**/obtain-trains').as('railSearch');
+    // Перехват API: добавил метод POST и звездочки, чтобы точно поймать запрос с любыми параметрами
+    cy.intercept({ method: 'POST', url: '**/obtain-trains**' }).as('railSearch');
 
     // 1. АВТОРИЗАЦИЯ
     cy.visit('https://test.globaltravel.space/sign-in'); 
@@ -19,6 +19,7 @@ describe('Railway Product', () => {
       .type(Cypress.env('LOGIN_EMAIL'), { log: false });
     
     cy.xpath("(//input[contains(@class,'input')])[2]")
+      .should('be.visible')
       .type(Cypress.env('LOGIN_PASSWORD'), { log: false }).type('{enter}');
 
     cy.url({ timeout: 20000 }).should('include', '/home');
@@ -27,19 +28,29 @@ describe('Railway Product', () => {
     cy.visit('https://test.globaltravel.space/railway');
     cy.url().should('include', '/railway');
 
-    // 2. ЗАПОЛНЕНИЕ ПОЛЕЙ (Откуда / Куда)
+    // 2. ОТКУДА
     cy.get('input[placeholder="Откуда"]').should('be.visible')
       .click({ force: true }).clear().type('ТАШКЕНТ СЕВЕРНЫЙ', { delay: 100 });
-    cy.get('.p-listbox-item', { timeout: 10000 })
-      .contains(/ТАШКЕНТ СЕВЕРНЫЙ/i).click({ force: true });
-    
+      
+    // 🛡 ЗАЩИТА CI: Ждем, пока выпадающий список физически отрендерится
+    cy.get('.p-listbox-item', { timeout: 10000 }).should('be.visible'); 
+    cy.get('.p-listbox-item').contains(/ТАШКЕНТ СЕВЕРНЫЙ/i).click({ force: true });
+    cy.wait(500); // Даем фронтенду записать выбранный город в State
+
+    // 2. КУДА
     cy.get('input[placeholder="Куда"]').should('be.visible')
       .click({ force: true }).clear().type('САМАРКАНД', { delay: 100 });
-    cy.get('.p-listbox-item', { timeout: 10000 })
-      .contains(/САМАРКАНД/i).click({ force: true });
+      
+    // 🛡 ЗАЩИТА CI: Ждем дропдаун
+    cy.get('.p-listbox-item', { timeout: 10000 }).should('be.visible');
+    cy.get('.p-listbox-item').contains(/САМАРКАНД/i).click({ force: true });
+    cy.wait(500);
 
-    // 3. ДАТА (Логика как в Avia с проверкой месяца)
+    // 3. ДАТА 
     cy.get("input[placeholder='Когда']").should('be.visible').click({ force: true });
+    
+    // Обязательно ждем появления календаря перед математикой
+    cy.get('.p-datepicker-calendar').should('be.visible');
 
     const today = new Date();
     const targetDate = new Date();
@@ -50,15 +61,21 @@ describe('Railway Product', () => {
       cy.wait(500);
     }
 
+    // 🛡 ЗАЩИТА CI: Добавил .not('.p-disabled'). 
+    // Без этого, если 2-е число выпадет на заблокированный день, CI сломает тест.
     cy.get('.p-datepicker-calendar td:not(.p-datepicker-other-month)')
+      .not('.p-disabled') 
       .contains(new RegExp(`^${targetDate.getDate()}$`))
       .click({ force: true });
     
     cy.get('body').type('{esc}');
+    // Даем календарю время на анимацию закрытия (чтобы не перекрывал кнопку поиска)
     cy.wait(1000);
 
     // 4. ПОИСК
+    // Добавил .first(), так как кнопок с классом p-button-icon-only часто бывает несколько (например, реверс городов)
     cy.get('button.easy-button.p-button-icon-only')
+        .first() 
         .should('be.visible')
         .click({ force: true });
 
@@ -74,6 +91,7 @@ describe('Railway Product', () => {
     });
 
     // Ждем стабилизации интерфейса (отсекаем лоадеры)
+    // eslint-disable-next-line cypress/no-unnecessary-waiting
     cy.wait(15000);
 
     cy.get('body').then(($body) => {
@@ -83,7 +101,6 @@ describe('Railway Product', () => {
       // Фильтруем реальные билеты от скелетонов
       allCards.each((index, el) => {
         const cardText = Cypress.$(el).text();
-        // В Railway проверяем наличие цены или кнопок действия
         if (cardText.includes('Выбрать') || cardText.includes('Купить') || cardText.includes('UZS') || cardText.includes('сум')) {
           realTicketsCount++;
         }

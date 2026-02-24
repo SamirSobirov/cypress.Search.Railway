@@ -1,6 +1,5 @@
 describe('Railway Product', () => {
 
-  // 🛡️ АВАРИЙНЫЙ ВЫХОД: Если тест упадет, мы пометим это в файлах
   Cypress.on('fail', (error) => {
     cy.writeFile('api_status.txt', '500');
     cy.writeFile('offers_count.txt', 'ERROR');
@@ -14,23 +13,22 @@ describe('Railway Product', () => {
 
   it('Search Flow - Railway with Smart Diagnostic', () => {
     cy.viewport(1280, 800);
-    
-    // Перехват API
+
     cy.intercept({ method: 'POST', url: '**/obtain-trains**' }).as('railSearch');
 
     // 1. АВТОРИЗАЦИЯ
-    cy.visit('https://test.globaltravel.space/sign-in'); 
+    cy.visit('https://test.globaltravel.space/sign-in');
     cy.xpath("(//input[contains(@class,'input')])[1]").should('be.visible')
       .type(Cypress.env('LOGIN_EMAIL'), { log: false });
     cy.xpath("(//input[contains(@class,'input')])[2]")
       .type(Cypress.env('LOGIN_PASSWORD'), { log: false }).type('{enter}');
 
     cy.url({ timeout: 20000 }).should('include', '/home');
-    
+
     // Переход в ЖД
     cy.visit('https://test.globaltravel.space/railway');
 
-    // 2. ВЫБОР ГОРОДОВ (Добавил страховку для CI)
+    // 2. ВЫБОР ГОРОДОВ 
     cy.get('input[placeholder="Откуда"]').should('be.visible').click({ force: true })
       .type('ТАШКЕНТ СЕВЕРНЫЙ', { delay: 100 });
     cy.get('.p-listbox-item', { timeout: 15000 }).contains(/ТАШКЕНТ СЕВЕРНЫЙ/i).click({ force: true });
@@ -50,12 +48,11 @@ describe('Railway Product', () => {
       .not('.p-disabled')
       .contains(new RegExp(`^${targetDate.getDate()}$`))
       .click({ force: true });
-    
+
     cy.get('body').type('{esc}');
     cy.wait(1000);
 
-    // 4. НАЖАТИЕ ПОИСКА (Используем более точный селектор)
-    // В ЖД часто несколько кнопок с иконкой, .last() нажимает на главную кнопку "Найти"
+    // 4. НАЖАТИЕ ПОИСКА
     cy.get('button.easy-button.p-button-icon-only').last().should('be.visible').click({ force: true });
 
     // 5. ПРОВЕРКА API
@@ -69,7 +66,6 @@ describe('Railway Product', () => {
       }
     });
 
-    // Ожидание результатов
     cy.wait(15000);
 
     // 6. ПОДСЧЕТ БИЛЕТОВ

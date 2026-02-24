@@ -2,13 +2,13 @@ name: Railway AutoTest
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: "0 * * * *"
   workflow_dispatch:
     inputs:
       user_chat_id:
-        description: 'ID чата для личного ответа'
+        description: "ID чата для личного ответа"
         required: false
-        default: ''
+        default: ""
 
 jobs:
   cypress-run:
@@ -20,7 +20,7 @@ jobs:
       - name: Cypress run
         uses: cypress-io/github-action@v6
         with:
-          spec: cypress/e2e/monitoring/railway.cy.js 
+          spec: cypress/e2e/monitoring/railway.cy.js
           browser: chrome
         env:
           CYPRESS_LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
@@ -36,7 +36,7 @@ jobs:
           else
             API_STATUS="UNKNOWN"
           fi
-          
+
           if [ -f offers_count.txt ]; then
             COUNT=$(cat offers_count.txt | tr -d '[:space:]')
           else
@@ -60,7 +60,6 @@ jobs:
             echo "MSG_COUNT=N/A" >> $GITHUB_ENV
           fi
 
-      # МАСТХЭВ: Сохраняем скриншоты, если тест упал
       - name: Upload Cypress Screenshots
         uses: actions/upload-artifact@v4
         if: failure() || always()
@@ -77,11 +76,11 @@ jobs:
             ${{ (github.event.inputs.user_chat_id != '') && 
             github.event.inputs.user_chat_id || 
             secrets.TELEGRAM_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_TOKEN }} 
+          token: ${{ secrets.TELEGRAM_TOKEN }}
           format: markdown
           message: |
             ${{ github.event.inputs.user_chat_id != '' && '👤 **Manual Testing**' || '📢 **Hourly Monitoring**' }}
-            
+
             🚂 **Railway Search Result**
             **Status:** ${{ env.MSG_STATUS }}
             **Offers Found:** ${{ env.MSG_COUNT }}

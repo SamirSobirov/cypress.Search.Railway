@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       user_chat_id:
-        description: 'ID чата для личного ответа'
+        description: 'ID чата'
         required: false
         default: ''
 
@@ -17,7 +17,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 1. Очистка и создание заглушек
+      # 1. Создаем файлы заранее, чтобы не было N/A при ошибке запуска
       - name: Pre-run Setup
         run: |
           rm -f api_status.txt offers_count.txt
@@ -35,7 +35,8 @@ jobs:
           CYPRESS_LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
         continue-on-error: true
 
-      - name: Parse Diagnostic Data
+      # 2. Обработка данных
+      - name: Parse Data
         if: always()
         run: |
           API_STATUS=$(cat api_status.txt | tr -d '[:space:]')
@@ -63,7 +64,7 @@ jobs:
           path: cypress/screenshots/
           if-no-files-found: ignore
 
-      - name: Send Telegram Notification
+      - name: Send Telegram
         if: always()
         uses: appleboy/telegram-action@master
         with:

@@ -17,11 +17,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 1. ОЧИСТКА: Удаляем мусорные файлы и папку скриншотов перед тестом
+      - name: Pre-run Cleanup
+        run: |
+          rm -f api_status.txt offers_count.txt
+          rm -rf cypress/screenshots/*
+
       - name: Cypress run
         uses: cypress-io/github-action@v6
         with:
           spec: cypress/e2e/monitoring/railway.cy.js 
           browser: chrome
+          # Чистим артефакты самого Cypress внутри контейнера
+          config: trashAssetsBeforeRuns=true
         env:
           CYPRESS_LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
           CYPRESS_LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
@@ -30,21 +38,23 @@ jobs:
       - name: Parse Diagnostic Data
         if: always()
         run: |
-          # Читаем статусы, удаляя лишние пробелы (tr -d), которые иногда добавляются в CI
+          # Проверяем статус API
           if [ -f api_status.txt ]; then
             API_STATUS=$(cat api_status.txt | tr -d '[:space:]')
           else
             API_STATUS="UNKNOWN"
           fi
           
+          # Проверяем количество билетов
           if [ -f offers_count.txt ]; then
             COUNT=$(cat offers_count.txt | tr -d '[:space:]')
           else
             COUNT="N/A"
           fi
 
-          if [[ "$API_STATUS" == "UNKNOWN" && "$COUNT" == "N/A" ]]; then
-            echo "MSG_STATUS=❌ Test Crashed (UI Error)" >> $GITHUB_ENV
+          # Логика формирования статуса для Telegram
+          if [[ "$API_STATUS" == "UNKNOWN" || "$COUNT" == "N/A" || "$COUNT" == "ERROR" ]]; then
+            echo "MSG_STATUS=❌ Test Failed (UI/Timeout)" >> $GITHUB_ENV
             echo "MSG_COUNT=N/A" >> $GITHUB_ENV
           elif [[ "$API_STATUS" -ge 400 ]]; then
             echo "MSG_STATUS=🆘 Server Error HTTP $API_STATUS" >> $GITHUB_ENV
@@ -52,20 +62,17 @@ jobs:
           elif [[ "$COUNT" == "0" ]]; then
             echo "MSG_STATUS=⚪ No Tickets" >> $GITHUB_ENV
             echo "MSG_COUNT=0" >> $GITHUB_ENV
-          elif [[ "$COUNT" =~ ^[0-9]+$ && "$COUNT" -gt 0 ]]; then
+          else
             echo "MSG_STATUS=✅ Success" >> $GITHUB_ENV
             echo "MSG_COUNT=$COUNT" >> $GITHUB_ENV
-          else
-            echo "MSG_STATUS=❌ Unknown Test Failure" >> $GITHUB_ENV
-            echo "MSG_COUNT=N/A" >> $GITHUB_ENV
           fi
 
-      # МАСТХЭВ: Сохраняем скриншоты, если тест упал
+      # 2. СОХРАНЕНИЕ СКРИНШОТОВ: Если тест упал, они будут в Artifacts
       - name: Upload Cypress Screenshots
         uses: actions/upload-artifact@v4
-        if: failure() || always()
+        if: always()
         with:
-          name: cypress-screenshots
+          name: railway-screenshots
           path: cypress/screenshots/
           if-no-files-found: ignore
 

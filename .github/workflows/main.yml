@@ -17,13 +17,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 1. Создаем файлы заранее, чтобы не было N/A при ошибке запуска
-      - name: Pre-run Setup
-        run: |
-          rm -f api_status.txt offers_count.txt
-          echo "UNKNOWN" > api_status.txt
-          echo "N/A" > offers_count.txt
-          mkdir -p cypress/screenshots
+      # # 1. Создаем файлы заранее, чтобы не было N/A при ошибке запуска
+      # - name: Pre-run Setup
+      #   run: |
+      #     rm -f api_status.txt offers_count.txt
+      #     echo "UNKNOWN" > api_status.txt
+      #     echo "N/A" > offers_count.txt
+      #     mkdir -p cypress/screenshots
 
       - name: Cypress run
         uses: cypress-io/github-action@v6
@@ -56,13 +56,13 @@ jobs:
             echo "MSG_COUNT=$COUNT" >> $GITHUB_ENV
           fi
 
-      - name: Upload Screenshots
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: failure-screenshots
-          path: cypress/screenshots/
-          if-no-files-found: ignore
+      # - name: Upload Screenshots
+      #   uses: actions/upload-artifact@v4
+      #   if: always()
+      #   with:
+      #     name: failure-screenshots
+      #     path: cypress/screenshots/
+      #     if-no-files-found: ignore
 
       - name: Send Telegram
         if: always()
